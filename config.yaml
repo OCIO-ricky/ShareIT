@@ -1,0 +1,26 @@
+# CDC SHARE IT Act - Repo Scanner Configuration
+
+global:
+  default_contact_email: "opensource@cdc.gov"
+  default_usage_type: "governmentWideReuse"
+
+github:
+  org: "cdcgov"
+  token_env_var: "GITHUB_TOKEN"
+
+gitlab:
+  base_url: "https://gitlab.cdc.gov/api/v4"
+  group: "CDC"
+  token_env_var: "GITLAB_TOKEN"
+
+bitbucket:
+  base_url: "https://bitbucket.cdc.gov/rest/api/1.0"
+  project: "CDC"
+  token_env_var: "BITBUCKET_TOKEN"
+  username_env_var: "BITBUCKET_USERNAME"
+
+tfs:
+  base_url: "https://tfs.cdc.gov/tfs/CDCCollection"
+  project: "CDC"
+  token_env_var: "TFS_PAT"
+  username_env_var: "TFS_USERNAME"

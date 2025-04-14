@@ -1,0 +1,20 @@
+# cdc-shareit-scan/requirements.txt
+#
+# Install dependencies:
+# $> python -m venv venv
+# $> source venv/bin/activate  # or venv\Scripts\activate on Windows
+# $> pip install --upgrade pip
+# $> pip install -r requirements.txt
+#
+# CDC SHARE IT Act Automation - Python Dependencies
+
+# Core Libraries
+requests>=2.31.0
+PyYAML>=6.0
+python-dotenv>=1.0.1
+
+# Word Document Generation (Governance Guide)
+python-docx>=1.1.0
+
+# PowerPoint Presentation Generation (Solution Deck)
+python-pptx>=0.6.21

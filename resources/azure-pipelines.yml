@@ -1,0 +1,47 @@
+# CDC SHARE IT Act Automation Pipeline
+# Azure DevOps Pipeline to generate code.json and publish it to CDC public web server
+# On push to main branch	Auto-generates latest code.json
+#
+# Create a Service Connection in Azure DevOps:
+# Name: cdc-webserver-ssh
+# Authentication: SSH with Private Key
+# Target: Web Server hosting https://www.cdc.gov/code.json
+#
+trigger:
+  branches:
+    include:
+      - main  # Change to your default branch if needed
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  pythonVersion: '3.11'
+
+steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '$(pythonVersion)'
+  displayName: 'Use Python $(pythonVersion)'
+
+- script: |
+    python -m venv venv
+    source venv/bin/activate
+    pip install --upgrade pip
+    pip install -r requirements.txt
+  displayName: 'Install Python dependencies'
+
+- script: |
+    source venv/bin/activate
+    python code_json_generator.py
+  displayName: 'Generate code.json'
+
+# Secure copy to CDC web server
+- task: CopyFilesOverSSH@0
+  inputs:
+    sshEndpoint: 'cdc-webserver-ssh'   # Define this in Azure DevOps Service Connections
+    sourceFolder: '$(Build.SourcesDirectory)'
+    contents: 'code.json'
+    targetFolder: '/var/www/html'
+  displayName: 'Publish code.json to CDC web server'
+

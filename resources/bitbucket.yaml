@@ -1,0 +1,10 @@
+image: python:3.11
+# Bitbucket Pipelines YAML Example
+pipelines:
+  default:
+    - step:
+        name: Generate and Publish code.json
+        script:
+          - pip install -r requirements.txt
+          - python code_json_generator.py
+          - scp code.json webserver:/var/www/html/code.json

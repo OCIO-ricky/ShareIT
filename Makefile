@@ -1,56 +1,42 @@
 # CDC SHARE IT Act Automation - Makefile
 #
-# SETUP:
-# $> make init
+# SETUP: Run once to install environment
+# $> make setup   
 # $> make install
 #
-# RUN:
-# $> make generate
+# RUN: ( Merge code.json files )
+# $> make merge 
 #
-# Deploy code.json to Web Server:
-# $> sudo make deploy
+# PUBLISH: (Output file is now live at /var/www/html/code.json)
+# $> make publish   
+#
+# Full merge and publish:
+# $> make all        
 #
 
-VENV_DIR := venv
-PYTHON := $(VENV_DIR)/bin/python
-PIP := $(VENV_DIR)/bin/pip
-CODE_JSON := code.json
-DEPLOY_DIR := /var/www/html
+# Central Automation Makefile for CDC SHARE IT Act
 
-.PHONY: help init install generate deploy clean test
+INPUT_DIR := submissions  # Change to your shared folder path
+OUTPUT := /var/www/html/code.json
 
-help:
-	@echo "CDC SHARE IT Automation - Available Commands:"
-	@echo "  make init       - Create Python virtual environment"
-	@echo "  make install    - Install dependencies"
-	@echo "  make generate   - Generate code.json file"
-	@echo "  make deploy     - Deploy code.json to web server"
-	@echo "  make test       - Test individual clients"
-	@echo "  make clean      - Remove virtual environment and artifacts"
+VENV := venv
+PYTHON := $(VENV)/bin/python
 
-init:
-	python3 -m venv $(VENV_DIR)
+.PHONY: all setup merge publish clean
 
-install:
-	$(PIP) install --upgrade pip
-	$(PIP) install -r requirements.txt
+all: merge publish
 
-generate:
-	$(PYTHON) code_json_generator.py
+setup:
+	python3 -m venv $(VENV)
+	$(PYTHON) -m pip install --upgrade pip
+	$(PYTHON) -m pip install -r requirements.txt
 
-deploy: generate
-	cp $(CODE_JSON) $(DEPLOY_DIR)/$(CODE_JSON)
+merge:
+	$(PYTHON) code_json_generator.py --input_dir $(INPUT_DIR) --output $(OUTPUT)
+
+publish:
+	@echo "✅ code.json published to $(OUTPUT)"
 
 clean:
-	rm -rf $(VENV_DIR)
-	rm -f $(CODE_JSON)
-
-test:
-	@echo "Testing GitHub Client..."
-	$(PYTHON) clients/github_client.py
-	@echo "Testing GitLab Client..."
-	$(PYTHON) clients/gitlab_client.py
-	@echo "Testing Bitbucket Client..."
-	$(PYTHON) clients/bitbucket_client.py
-	@echo "Testing TFS Client..."
-	$(PYTHON) clients/tfs_client.py
+	rm -rf $(VENV)
+	rm -f code.json

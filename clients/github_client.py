@@ -1,14 +1,14 @@
 # cdc-shareit-scan/clients/github_client.py
 #
-# Set environment variables:
-# export GITHUB_ORG=cdcgov
-# export GITHUB_TOKEN=your_github_pat
-
+# $> python github_client.py --output myproject_code.json
+#
 import requests
 import os
 import yaml
 from dotenv import load_dotenv
 from datetime import datetime
+import json
+import argparse
 
 # Load environment variables
 load_dotenv()
@@ -19,7 +19,7 @@ with open("config.yaml", "r") as f:
 
 GITHUB_API_URL = "https://api.github.com"
 GITHUB_ORG = config["github"]["org"]
-GITHUB_TOKEN = os.getenv(config["github"]["token_env_var"])
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
 def fetch_github_repos():
     headers = {
@@ -58,9 +58,18 @@ def fetch_github_repos():
 
     return repos
 
+def generate_code_json(repos, output_file):
+    data = {
+        "releases": repos
+    }
+    with open(output_file, 'w') as f:
+        json.dump(data, f, indent=2)
 
 if __name__ == "__main__":
-    import json
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--output', type=str, default='code.json', help='Output file name')
+    args = parser.parse_args()
 
     repos = fetch_github_repos()
-    print(json.dumps(repos, indent=2))
+    generate_code_json(repos, args.output)
+    print(f"Generated {args.output} successfully.")

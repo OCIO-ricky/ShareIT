@@ -1,61 +1,55 @@
-# cdc-shareit-scan/clients/tfs_client.py
+# cdc-shareit-scan/code_json_generator.py
 
-import requests
+import json
 import os
 import yaml
-from dotenv import load_dotenv
-from base64 import b64encode
 from datetime import datetime
+from glob import glob
 
-# Load environment variables from .env file
-load_dotenv()
-
-# Load configuration from config.yaml
+# Load configuration
 with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
-TFS_BASE_URL = config["tfs"]["base_url"]
-TFS_PROJECT = config["tfs"]["project"]
-TFS_USERNAME = os.getenv(config["tfs"]["username_env_var"])
-TFS_PAT = os.getenv(config["tfs"]["token_env_var"])
+def collect_all_metadata(folder_path):
+    all_releases = []
+    for path in glob(os.path.join(folder_path, "*.json")):
+        with open(path) as f:
+            try:
+                data = json.load(f)
+                all_releases.extend(data.get("releases", []))
+            except Exception as e:
+                print(f"Error reading {path}: {e}")
+    return all_releases
 
-def fetch_tfs_repos():
-    repos = []
-
-    url = f"{TFS_BASE_URL}/{TFS_PROJECT}/_apis/git/repositories?api-version=6.0"
-
-    auth = (TFS_USERNAME, TFS_PAT)
-
-    headers = {
-        "Accept": "application/json"
+def generate_merged_code_json(releases, output_path="code.json"):
+    code_json = {
+        "agency": "Centers for Disease Control and Prevention",
+        "organization": {
+            "acronym": "CDC",
+            "name": "Centers for Disease Control and Prevention",
+            "website": "https://www.cdc.gov",
+            "codeUrl": "https://www.cdc.gov/code.json"
+        },
+        "version": "2.0.0",
+        "measurementType": {
+            "agencyWidePolicy": True,
+            "complianceBaseline": True,
+            "customPolicy": False
+        },
+        "releases": releases
     }
-
-    response = requests.get(url, headers=headers, auth=auth)
-
-    if response.status_code != 200:
-        print(f"Failed to fetch TFS repos: {response.status_code}")
-        return repos
-
-    data = response.json()
-    values = data.get("value", [])
-
-    for repo in values:
-        repos.append({
-            "name": repo["name"],
-            "description": repo.get("description", ""),
-            "url": repo["webUrl"],
-            "usageType": "governmentWideReuse",
-            "tags": ["tfs", repo["project"]["name"]],
-            "contact": f"{repo['project']['name'].lower()}@cdc.gov",
-            "created": "2023-01-01",  # Azure DevOps REST API doesn't provide creation date directly
-            "lastModified": datetime.today().strftime('%Y-%m-%d')  # Optional improvement: Use commits API for last activity date
-        })
-
-    return repos
-
+    with open(output_path, "w") as f:
+        json.dump(code_json, f, indent=2)
 
 if __name__ == "__main__":
-    import json
+    import argparse
 
-    repos = fetch_tfs_repos()
-    print(json.dumps(repos, indent=2))
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--input_dir', type=str, required=True, help='Directory containing individual code.json files')
+    parser.add_argument('--output', type=str, default='code.json', help='Output file name')
+    args = parser.parse_args()
+
+    all_metadata = collect_all_metadata(args.input_dir)
+    generate_merged_code_json(all_metadata, args.output)
+    print(f"Merged code.json generated successfully at {args.output}")
+

@@ -4,11 +4,14 @@ import requests
 import os
 import yaml
 from dotenv import load_dotenv
+from datetime import datetime
+import json
+import argparse
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
 
-# Load configuration from config.yaml
+# Load configuration
 with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
@@ -40,15 +43,18 @@ def fetch_bitbucket_repos():
             break
 
         for repo in values:
+            updated_epoch = repo.get("updatedDate", 0) // 1000
+            last_modified = datetime.utcfromtimestamp(updated_epoch).strftime('%Y-%m-%d') if updated_epoch > 0 else datetime.today().strftime('%Y-%m-%d')
+
             repos.append({
                 "name": repo["name"],
                 "description": repo.get("description", ""),
                 "url": repo["links"]["html"]["href"],
-                "usageType": "governmentWideReuse",  # Internal by default
+                "usageType": "governmentWideReuse",
                 "tags": ["bitbucket"],
                 "contact": f"{repo['project']['key'].lower()}@cdc.gov",
-                "created": "2023-01-01",  # Bitbucket Server API doesn't provide this
-                "lastModified": repo.get("updatedDate", 0) // 1000  # Epoch to YYYY-MM-DD
+                "created": "2023-01-01",
+                "lastModified": last_modified
             })
 
         if data.get("isLastPage", True):
@@ -57,15 +63,18 @@ def fetch_bitbucket_repos():
 
     return repos
 
+def generate_code_json(repos, output_file):
+    data = {
+        "releases": repos
+    }
+    with open(output_file, 'w') as f:
+        json.dump(data, f, indent=2)
 
 if __name__ == "__main__":
-    import json
-    from datetime import datetime
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--output', type=str, default='code.json', help='Output file name')
+    args = parser.parse_args()
 
     repos = fetch_bitbucket_repos()
-    # Convert epoch to readable date if available
-    for r in repos:
-        if isinstance(r["lastModified"], int) and r["lastModified"] > 0:
-            r["lastModified"] = datetime.utcfromtimestamp(r["lastModified"]).strftime('%Y-%m-%d')
-
-    print(json.dumps(repos, indent=2))
+    generate_code_json(repos, args.output)
+    print(f"Generated {args.output} successfully.")

@@ -1,4 +1,8 @@
 # cdc-shareit-scan/code_json_generator.py
+#
+# $> python code_json_generator.py --input_dir /path/to/repo-jsons/ --output /var/www/html/code.json
+#
+#
 # This will be auto-generated but here’s a sample structure:
 #
 # {
@@ -36,57 +40,28 @@
 # ]
 # }
 
-# cdc-shareit-scan/code_json_generator.py
-
 import json
-import yaml
 import os
+import yaml
 from datetime import datetime
-from clients.github_client import fetch_github_repos
-from clients.gitlab_client import fetch_gitlab_repos
-from clients.bitbucket_client import fetch_bitbucket_repos
-from clients.tfs_client import fetch_tfs_repos
+from glob import glob
 
+# Load configuration
+with open("config.yaml", "r") as f:
+    config = yaml.safe_load(f)
 
-def load_config():
-    with open("config.yaml", "r") as f:
-        return yaml.safe_load(f)
+def collect_all_metadata(folder_path):
+    all_releases = []
+    for path in glob(os.path.join(folder_path, "*.json")):
+        with open(path) as f:
+            try:
+                data = json.load(f)
+                all_releases.extend(data.get("releases", []))
+            except Exception as e:
+                print(f"Error reading {path}: {e}")
+    return all_releases
 
-
-def build_code_json():
-    config = load_config()
-
-    default_contact = config["global"].get("default_contact_email", "opensource@cdc.gov")
-    default_usage_type = config["global"].get("default_usage_type", "governmentWideReuse")
-
-    releases = []
-
-    github_repos = fetch_github_repos()
-    gitlab_repos = fetch_gitlab_repos()
-    bitbucket_repos = fetch_bitbucket_repos()
-    tfs_repos = fetch_tfs_repos()
-
-    all_repos = github_repos + gitlab_repos + bitbucket_repos + tfs_repos
-
-    for repo in all_repos:
-        releases.append({
-            "name": repo["name"],
-            "description": repo.get("description", "No description available."),
-            "url": repo["url"],
-            "permissions": {
-                "usageType": repo.get("usageType", default_usage_type),
-                "exemptionText": repo.get("exemptionText", "N/A")
-            },
-            "tags": repo.get("tags", []),
-            "contact": {
-                "email": repo.get("contact", default_contact)
-            },
-            "date": {
-                "created": repo.get("created", "2023-01-01"),
-                "lastModified": repo.get("lastModified", datetime.today().strftime('%Y-%m-%d'))
-            }
-        })
-
+def generate_merged_code_json(releases, output_path="code.json"):
     code_json = {
         "agency": "Centers for Disease Control and Prevention",
         "organization": {
@@ -103,10 +78,17 @@ def build_code_json():
         },
         "releases": releases
     }
-
-    with open("code.json", "w") as f:
+    with open(output_path, "w") as f:
         json.dump(code_json, f, indent=2)
 
-
 if __name__ == "__main__":
-    build_code_json()
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--input_dir', type=str, required=True, help='Directory containing individual code.json files')
+    parser.add_argument('--output', type=str, default='code.json', help='Output file name')
+    args = parser.parse_args()
+
+    all_metadata = collect_all_metadata(args.input_dir)
+    generate_merged_code_json(all_metadata, args.output)
+    print(f"Merged code.json generated successfully at {args.output}")
